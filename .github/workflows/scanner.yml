@@ -1,0 +1,45 @@
+name: Binance RSI skaner
+
+on:
+  schedule:
+    - cron: "3 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: binance-scanner
+  cancel-in-progress: false
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Kutubxonalarni ornatish
+        run: pip install -r requirements.txt
+
+      - name: Oxirgi holatni tiklash
+        uses: actions/cache/restore@v4
+        with:
+          path: state.json
+          key: scanner-state-${{ github.run_id }}
+          restore-keys: scanner-state-
+
+      - name: Skanerlash
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python scanner.py auto all
+
+      - name: Holatni saqlash
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: state.json
+          key: scanner-state-${{ github.run_id }}
